@@ -12,20 +12,28 @@ public class Poker {
         int antibet;
         int playbet; //TODO setup playbet!! if player doesnt fold they must put a playbet that is = antibet
         int pairPlusBet;
+        int winmult = 0;
+
+        public void newHand(Card one, Card two, Card three) {
+            this.hand.subList(0, 3).clear();
+            this.antibet = 0;
+            this.pairPlusBet = 0;
+            this.highcard = 0;
+            this.playbet = 0;
+            this.fold = false;
+            this.winmult = 0;
+            this.hand = new ArrayList<>();
+            this.hand.add(one);
+            this.hand.add(two);
+            this.hand.add(three);
+
+        }
 
         public Player(Card one, Card two, Card three) {
             this.hand = new ArrayList<>();
             this.hand.add(one);
             this.hand.add(two);
             this.hand.add(three);
-        }
-
-        public ArrayList<String> cardCheck(int num) {
-            ArrayList<String> singleCardInfo = new ArrayList<>();
-            singleCardInfo.add(this.hand.get(num).suit);
-            singleCardInfo.add(this.hand.get(num).face);
-            singleCardInfo.add(Integer.toString(this.hand.get(num).value));
-            return singleCardInfo;
         }
 
         public Card rawCard(int num) {
@@ -40,6 +48,23 @@ public class Poker {
             return this.hand.get(num).face;
         }
 
+        public ArrayList<String> fullHandSuit() {
+            ArrayList<String> cardsInfo = new ArrayList<>();
+            cardsInfo.add((this.hand.get(0).suit));
+            cardsInfo.add((this.hand.get(1).suit));
+            cardsInfo.add((this.hand.get(2).suit));
+            return cardsInfo;
+        }
+
+        public ArrayList<String> fullHandFace() {
+            ArrayList<String> cardsInfo = new ArrayList<>();
+            cardsInfo.add(this.hand.get(0).face);
+            cardsInfo.add(this.hand.get(1).face);
+            cardsInfo.add(this.hand.get(2).face);
+            return cardsInfo;
+        }
+
+
         public void highCardCal() {
             this.highcard = 0;
             for (Card card : this.hand) {
@@ -48,7 +73,7 @@ public class Poker {
                 }
             }
         }
-        public int Calculate(){
+        public int Calculate() {
             ArrayList<String> nums = new ArrayList<>();
             ArrayList<String> faces = new ArrayList<>();
             ArrayList<Integer> values = new ArrayList<>();
@@ -67,14 +92,14 @@ public class Poker {
 
 
             // Pair 1:1
-            for(String num : check) {
+            for (String num : check) {
                 if (Collections.frequency(nums, num) == 2) {
                     pair = true;
                     break;
                 }
             }
             // flush  3:1
-            for(String suit : suits) {
+            for (String suit : suits) {
                 if (Collections.frequency(faces, suit) == 3) {
                     flush = true;
                     break;
@@ -82,32 +107,31 @@ public class Poker {
             }
             // Straight 6:1
             Collections.sort(values);
-            if((values.get(values.size()-1) - values.get(0)) == 2) {
+            if ((values.get(values.size() - 1) - values.get(0)) == 2) {
                 straight = true;
             }
             //Straight Flush  40:1
-            if(straight && flush) {
+            if (straight && flush) {
                 SF = true;
             }
             // Three Of a kind 30:1
-            for(String num : check) {
+            for (String num : check) {
                 if (Collections.frequency(nums, num) == 3) {
                     kind = true;
                     break;
                 }
             }
-            int winmult = 0;
-            if(pair) winmult = 1;
+            if (pair) this.winmult = 1;
 
-            if(flush)winmult = 3;
+            if (flush) this.winmult = 3;
 
-            if(straight)winmult = 6;
-            if(kind)winmult = 30;
-            if(SF)winmult = 40;
-            return winmult;
+            if (straight) this.winmult = 6;
+            if (kind) this.winmult = 30;
+            if (SF) this.winmult = 40;
+            return this.winmult;
         }
-    }
 
+    }
     static class Card {
         String suit;
         String face;
@@ -145,42 +169,104 @@ public class Poker {
     }
 
 
-    public static void main(String[] args) {                                //TODO SETUP UI
-        ArrayList<Card> cards = makeCards();                                //TODO Make LOOPABLE
-        if (cards.size() <= 10) {                                           //TODO BETTING
-            cards = makeCards();
-        }
+    public static void main(String[] args) {
+        ArrayList<Card> cards = makeCards();
         Player player = new Player(draw(cards), draw(cards), draw(cards));
         Player dealer = new Player(draw(cards), draw(cards), draw(cards));
-        System.out.print(player.cardCheck(0));
-        System.out.print(player.cardCheck(1));
-        System.out.println(player.cardCheck(2));
-        System.out.print(dealer.cardCheck(0));
-        System.out.print(dealer.cardCheck(1));
-        System.out.println(dealer.cardCheck(2));
+        clear(player);
+        while(player.chips != 0) game(player,dealer,cards);
+        System.out.println("You got kicked out.");
+    }
 
-
-//     Card t1 =new Card("Hearts", "2");
-//        t1.checkValue();
-//     Card t2 =new Card("Hearts", "3");
-//        t2.checkValue();
-//     Card t3 =new Card("Hearts", "4");
-//        t3.checkValue();
-//     Player testing = new Player(t1,t2,t3);
+    private static void game(Player player, Player dealer,ArrayList<Card> cards) {
+        if (cards.size() <= 10) {
+            cards = makeCards();
+        }
+        placingBet(player);
+        divider("Your hand");
+        revealHand(player);
         fold(player);
-        payday(player,dealer);
+        if(!player.fold) {
+            clear(player);
+            divider("Your hand");
+            revealHand(player);
+            divider("Stakes");
+            System.out.printf("Total Coins: %d anti-bet: %d pairplus bet: %d play bet: %d\n", player.chips, player.antibet, player.pairPlusBet, player.playbet);
+            divider("Dealer's hand");
+            revealHand(dealer);
+            payday(player, dealer);
+        }
+        player.newHand(draw(cards), draw(cards), draw(cards));
+        dealer.newHand(draw(cards), draw(cards), draw(cards));
+        divider("Outcome");
+        System.out.printf("Total Coins: %d anti-bet: %d pairplus bet: %d play bet: %d\n", player.chips, player.antibet, player.pairPlusBet, player.playbet);
+        if(player.chips != 0) {
+            System.out.println("Press enter to play again");
+            scoreboard(player);
+            scanner.nextLine();
+            clear(player);
+        }
+    }
+
+    private static void placingBet(Player player) {
+        clear(player);
+        System.out.print("\n What would you like to bet as your ante bet (Remember it you must have 2x this in chips for this.)\n");
+        String user = scanner.nextLine();
+        if(isNumber(user)){
+            if((Integer.parseInt(user) * 2) > player.chips){
+                System.out.println("Make sure you bet a number that you can double");
+                placingBet(player);
+            }else {
+                player.chips -= Integer.parseInt(user);
+                player.antibet = Integer.parseInt(user);
+                pairPlusBetting(player);
+            }
+        }else {
+            System.out.println("Make sure you put in a whole number");
+            System.out.println("Press enter to try again");
+            placingBet(player);
+        }
+
+    }
+
+    private static void pairPlusBetting(Player player) {
+        clear(player);
+        System.out.printf("You have %d chips that you can bet \n What would you like to bet as your pair plus bet (Get rewards depending on what pair you get)\n",(player.chips - player.antibet));
+        String user = scanner.nextLine();
+        if(isNumber(user)){
+            if(Integer.parseInt(user) > (player.chips - player.antibet)){
+                System.out.println("Make sure have enough to bet");
+                pairPlusBetting(player);
+            }else{
+                player.pairPlusBet = Integer.parseInt(user);
+                player.chips -= player.pairPlusBet;
+                clear(player);
+            }
+        }else {
+            System.out.println("Make sure you put in a whole number");
+            pairPlusBetting(player);
+        }
+    }
+
+
+    private static void revealHand(Player player) {
+        ArrayList<String> suit = player.fullHandSuit();
+        ArrayList<String> face = player.fullHandFace();
+
+        System.out.printf("The %s of %s, the %s of %s, and the %s of %s\n", face.get(0), suit.get(0), face.get(1), suit.get(1), face.get(2), suit.get(2));
     }
 
     private static void fold(Player player) {
         System.out.println("Would you like to keep playing and double down or fold? 1) Keep playing 2) Fold");
         try {
             int user = Integer.parseInt(scanner.nextLine());
-            switch (user){
-                case(1):
+            // int user = 1; Testing
+            switch (user) {
+                case (1):
                     player.chips -= player.antibet;
                     player.playbet = player.antibet;
                     break;
-                case(2):
+                case (2):
                     player.fold = true;
                     player.antibet = 0;
                     player.pairPlusBet = 0;
@@ -189,35 +275,64 @@ public class Poker {
                 default:
                     throw new Exception();
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             System.out.println("Make sure that it is either 1 or 2.");
             fold(player);
         }
     }
 
-    private static void payday(Player player,Player dealer) {
+    private static void payday(Player player, Player dealer) {
+        highcard(player, dealer);
         pairbet(player);
-        highcard(player,dealer);
     }
 
-    private static void pairbet(Player player){
+    private static void pairbet(Player player) {
+        divider("Pair plus");
         int dealergives = (player.Calculate() * player.pairPlusBet);
-        if ((dealergives + player.pairPlusBet) != player.pairPlusBet) {
+        if (((dealergives + player.pairPlusBet) != player.pairPlusBet) && !player.fold) {
             player.chips += dealergives + player.pairPlusBet;
-        }
+            switch (player.winmult){
+                case(1):
+                    System.out.printf("You got a pair dealer gave you %d and that puts you at a total of %d\n",dealergives,player.chips);
+                    break;
+                case(3):
+                    System.out.printf("You got a flush dealer gave you %d and that puts you at a total of %d\n",dealergives,player.chips);
+                    break;
+                case(6):
+                    System.out.printf("You got a straight dealer gave you %d and that puts you at a total of %d\n",dealergives,player.chips);
+                    break;
+                case(30):
+                    System.out.printf("You got a three of a kind dealer gave you %d and that puts you at a total of %d\n",dealergives,player.chips);
+                    break;
+                case(40):
+                    System.out.printf("You got a straight flush dealer gave you %d and that puts you at a total of %d\n",dealergives,player.chips);
+                    break;
+
+
+            }
+        }else System.out.printf("You got nothing that puts you at a total of %d\n",player.chips);
         player.pairPlusBet = 0;
     }
+
     private static void highcard(Player one, Player two) {
+        divider("High card");
         one.highCardCal();
         two.highCardCal();
         if (two.highcard <= 11 && !one.fold) {
-            one.chips += one.antibet;
+            one.chips += one.antibet + one.antibet + one.playbet;
+            System.out.printf("Dealer had less then a Jack. That puts you at %d \n",one.chips);
             one.antibet = 0;
+            one.playbet = 0;
         }
         if ((two.highcard >= 12 && one.highcard > two.highcard) && !one.fold) {
-            one.chips += one.antibet + one.playbet;
+            one.chips += one.antibet * 2 + one.playbet * 2;
+            System.out.printf("Dealer had a %s and you had higher puts you at %d \n",two.highcard,one.chips);
             one.antibet = 0;
+            one.playbet = 0;
+        } else if (two.highcard >= 12 && (one.highcard <= two.highcard)) {
+            System.out.printf("Dealer had a %s and you had lower puts you at %d \n",two.highcard,one.chips);
         }
+
 
     }
 
@@ -254,5 +369,21 @@ public class Poker {
         } catch (NumberFormatException e) {
             return false;
         }
+    }
+
+    public static void clear(Player player) {
+        System.out.print("\033[H\033[2J");
+        scoreboard(player);
+    }
+    private static void scoreboard(Player player){
+        System.out.print("\033[999C");
+        String winPrint = "Chips " + player.chips;
+        for (int i = 0; i < winPrint.length() - 1; i++) {
+            System.out.print("\b");
+        }
+        System.out.println(winPrint);
+    }
+    public static void divider(String input) {
+        System.out.printf("-----------------------------------------------%s-----------------------------------------------\n",input);
     }
 }
